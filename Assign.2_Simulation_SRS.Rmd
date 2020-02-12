@@ -1,0 +1,489 @@
+---
+title: "Assign.2_Simulation_SRS"
+output: html_document
+---
+```{r}
+library(tidyr)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+#### One-shot experiment ####
+
+## Kernel Density Estimation ##
+# S1. Mixture of normal distribution
+```{r}
+
+set.seed(1)
+data_s1 <- c(rnorm(500,-1,1/3),rnorm(500,1,1/3))                           
+
+#true distribution
+dfn_s1 <- function(x){
+  0.5*dnorm(x,-1,1/3) + 0.5*dnorm(x,1,1/3)
+}
+
+x_dfn_s1 <- seq(-3,3,length=1000) #,by=0.1)
+plot(density(data_s1,kernel="gaussian"),col="blue",ylim=c(0,0.8),   #R default
+     xlab="(a):Kernel estimate for Normal mixture (S1)",ylab="", main="")   
+lines(x_dfn_s1,dfn_s1(x_dfn_s1),col="green")                              #true dis.
+lines(density(data_s1,kernel="gaussian",bw="SJ"))                   #SJ bandwidth
+legend("topleft",c("True density","R default","SJ bandwidth"),
+       lty=c(1,1,1),col=c("green","blue","black"),cex=0.8)
+ 
+
+```
+
+
+# S2. Mixture of shifted beta distributions
+```{r}
+set.seed(1)
+#data_x <- runif(1000)
+#shift_beta <- function(x){
+ # y <- 0
+ # n <- length(x)
+ # for(i in 1:n){
+   # y[i] <- 0.4*(1/beta(2,2))*(x[i])*(1-x[i]) + 0.6*(1/beta(8,10))*((x[i])^7)*((1-x[i])^9)
+ # }
+ # return (y)
+#}
+
+#data_s2 <- c(rbeta(500,2,16),rbeta(500,8,10))
+data_s2 <- c(rbeta(400,2,20),rbeta(600,8,10))
+
+#true dis.
+dfn_s2 <- function(x){
+  0.4*dbeta(x,2,20) + 0.6*dbeta(x,8,10)
+}
+
+x_dfn_s2 <- seq(-1,1,length=1000) #,by=0.01)
+
+plot(density(data_s2,kernel="gaussian"),col="blue",ylim=c(0,3.5),xlim=c(-0.2,1),
+     xlab="(b):Knernel estimate for Beta mixture (S2)", ylab="",main="") # R default
+lines(x_dfn_s2,dfn_s2(x_dfn_s2),col="green")                            # True dis.
+lines(density(data_s2,kernel="gaussian",bw="SJ"))                       #SJ bandwidth
+legend("topleft",c("True density","R default","SJ bandwidth"),      
+       lty=c(1,1,1),col=c("green","blue","black"),cex=0.8)
+
+
+```
+
+ 
+# S3. Standard Cauchy distribution
+```{r}
+set.seed(1)
+data_s3 <- c(rcauchy(1000,0,1))                           
+
+#true distribution: dcauchy()
+
+x_dfn_s3 <- seq(-150,150,length=1000)
+plot(density(data_s3,kernel="gaussian"),col="blue",ylim=c(0,0.6),xlim=c(-150,150),   #R default
+     xlab="(c):Kernel estimate for Standard Cauchy distribution (S3)", ylab="",main="")   
+lines(x_dfn_s3,dcauchy(x_dfn_s3),col="green")                              #true dis.
+lines(density(data_s3,kernel="gaussian",bw="SJ"))                        #SJ bandwidth
+legend("topleft",c("True density","R default","SJ bandwidth"),
+       lty=c(1,1,1),col=c("green","blue","black"),cex=0.8)
+
+#plot(x_dfn_s3,dcauchy(x_dfn_s3,location=0,scale=1),type="l")
+
+
+#可能受binomial的影响？因为binomial是discrete
+```
+
+
+# S4. Beta-Binomial distribution
+```{r}
+installed.packages("extraDistr")
+library(extraDistr)
+
+set.seed(1)
+data_s4 <- c(rbbinom(1000,size=10,alpha=2,beta=2))
+
+#true distribution: dbbinom()
+
+x_dfn_s4 <- seq(-4,14,length=1000)
+
+plot(density(data_s4,kernel="gaussian"),col="blue",ylim=c(0,0.5),xlim=c(-4,14),   #R default
+     xlab="(d):Kernel estimate for Beta-Binomial distribution (S4)", ylab="",main="") 
+
+lines(x_dfn_s4,dbbinom(x_dfn_s4,size=10,alpha=2,beta=2),col="green")                              #true dis.
+
+lines(density(data_s4,kernel="gaussian",bw="SJ"))                        #SJ bandwidth
+
+legend("topleft",c("True density","R default","SJ bandwidth"),
+       lty=c(1,1,1),col=c("green","blue","black"),cex=0.8)
+
+
+
+```
+
+
+
+
+## Knn Density Estimation ##
+# S1. Mixture of normal distribution
+```{r}
+set.seed(1)
+s1_data <- c(rnorm(500,-1,1/3),rnorm(500,1,1/3))
+dat1 <- matrix(s1_data,nrow=2,ncol=500)
+#names(dat1) <- c("N(-1,1/3)","N(1,1/3)")
+
+sort_dat1 <- sort(dat1)
+
+test_s1 <- as.matrix(sort_dat1[1:500])
+train_s1 <- as.matrix(sort_dat1[501:1000])
+cl <- dat1[2,]
+  
+library(class)
+eucli_distance <- knn(train=train_s1,test=test_s1,cl=cl, k=7)
+
+#install.packages(gmodels)
+#CrossTable(x=cl,y=eucli_distance,prop.chisq=F)
+plot(x=dat1[1,],y=dat1[2,],cl=cl,pch=c(0,1,18),col=c("blue","black","green"),
+     #as.integer(eucli_distance),
+     xlab="(c): KNN estimation for Normal mixture (S1)", ylab="")
+
+legend("topleft",c("True density with N(-1,1/3)","True density with N(1,1/3) ","KNN estimation"),
+       pch=c(0,1,18),col=c("blue","black","green"),cex=0.8)
+
+
+```
+
+
+# S2. Mixture of Beta distribution
+```{r}
+set.seed(1)
+s2_data <- c(rbeta(500,2,20),rbeta(500,8,10))
+dat2 <- matrix(s2_data,nrow=2,ncol=500)
+
+sort_dat2 <- sort(dat2)
+
+test_s2 <- as.matrix(sort_dat2[1:500])
+train_s2 <- as.matrix(sort_dat2[501:1000])
+cl2 <- dat2[2,]
+  
+library(class)
+eucli_distance2 <- knn(train=train_s2,test=test_s2,cl=cl2, k=7)
+
+plot(x=dat2[1,],y=dat2[2,],cl=cl2,pch=c(0,1,18),col=c("blue","black","green"),
+     xlab="(d): KNN estimation for Beta mixture (S2)", ylab="")
+
+legend("topleft",c("True density with B(2,20)","True density with B(8,10) ","KNN estimation"),
+       pch=c(0,1,18),col=c("blue","black","green"),cex=0.8)
+
+
+```
+
+
+
+# S3. Standard Cauchy distribution
+```{r}
+set.seed(1)
+#s3_data <- c(rcauchy(1000,0,1)) 
+s3_data <- c(rcauchy(500,0,1),rcauchy(500,2,3)) 
+
+dat3 <- matrix(s3_data,nrow=2,ncol=500)
+
+sort_dat3 <- sort(dat3)
+
+test_s3 <- as.matrix(sort_dat3[1:500])
+train_s3 <- as.matrix(sort_dat3[501:1000])
+cl3 <- dat3[2,]
+  
+library(class)
+# eucli_distance3 <- knn(train=train_s3,test=test_s3,cl=cl3, k=7)
+
+plot(x=dat3[1,],y=dat3[2,],cl=cl3,pch=c(0,1,18),col=c("blue","black","green"),
+     xlab="(c): KNN estimation for Cauchy distribution (S3)", ylab="")
+
+legend("topleft",c("True density with Cauchy(0,1)","True density with Cauchy(2,3) ","KNN estimation"),
+       pch=c(0,1,18),col=c("blue","black","green"),cex=0.8)
+
+#x_cau <- seq(-600,200,length=1000)
+#plot(x_cau,dcauchy(x_cau))#,ylim=c(-2,200))
+
+```
+
+
+
+# S4. 
+```{r}
+installed.packages("extraDistr")
+library(extraDistr)
+
+set.seed(1)
+data_s4 <- c(rbbinom(1000,size=10,alpha=2,beta=2))
+
+
+
+
+```
+
+
+
+#### Monte Carlo Simulation Study ####
+
+## S1. Mixture of normal
+```{r}
+mc_simu <- function(n){
+  set.seed(1)
+  #n <- 500
+  R <- 100
+
+### True
+  ynorm <- matrix(data=NA,nrow=R,ncol=n)   # matrix with simulated datasets
+  mu1 <- numeric(R)   # vector with mean for each simulated dataset; Here, for initializing
+#med1 <- numeric(R)   # vector with median for each simulated dataset
+
+  for (r in 1:R) {   # run R=1000 times 
+    ynorm[r, ] <- c(rnorm(n/2,-1,1/3),rnorm(n/2,1,1/3))     # each row denotes one-shot experiment
+    mu1[r] <- mean(ynorm[r, ])
+  }
+  MCMmu1 <- mean(mu1)
+
+# true func
+  dfn_s1 <- function(x){
+    0.5*dnorm(x,-1,1/3) + 0.5*dnorm(x,1,1/3)
+  }
+
+#estimator Knernel
+  h1 <- density(mu1,kernel="gaussian",bw="SJ")$bw
+  est_kernel <- function(x){
+    fK <- (1/sqrt(2*pi)*h1)*exp(-((x)^2)/(2*(h1^2)))
+    sum_k <- sum(fK)        #sum_K + fK
+    est_K <- sum_k/(n*h1)
+    return (est_K)
+  }
+
+  ise_kernel1 <- function(x) {
+    (est_kernel(x) - dfn_s1(x))^2
+  #(x-y)^2
+  }
+
+
+#KNN
+  find_k <- function(x,y){   # x=test set; y=train set, x is a number & y is a vector
+    k <- sqrt(length(y))
+    dis <- abs(y-x)
+    sort_dis <- sort(dis)
+    k_value <- sort_dis[k]
+    return (k_value) # i.e. Rn
+  }
+
+  est_knn <- function(x,y){
+    Rn <- find_k(x,y)
+    w_x <- (y-x)/(Rn)
+    sum_w <- sum(w_x)
+    est_KNN <- (1/n*Rn)*sum_w
+    return (est_KNN)
+  }
+  ise_knn <- function(x,y){
+    (est_knn(x,y)-dfn_s1(x))^2
+  }
+#integrate(ise_knn,-Inf, Inf)
+# test set & train set
+  n1 <- n/2
+  n2 <- n/2 + 1
+  r1 <- R/2
+  r2 <- R/2+1
+  sort_ynorm <- sort(ynorm) 
+  test_ynorm <- sort_ynorm[1:r1] 
+  train_ynorm <- sort_ynorm[r2:R] 
+  x_s1 <- c(as.vector(ise_kernel1(ynorm[1:200])),as.vector(ise_knn(test_ynorm,train_ynorm)))
+  f_s1 <- factor(rep(c("kernel","knn"),each=125)) #定义分组因子
+ # data_s1 <- data.frame(x_s1,f_s1)
+  #boxplot(x_s1~f_s1,data_s1,xlab="",ylab="",ylim=c(0,0.80),
+  #      main="S1: Mixture of Normal Distribution",
+  #      col=c("light blue","dark blue"),bty="")
+  out <- list(a=x_s1,b=f_s1)#,c=data_s1)
+  return (out)
+}
+#boxplot(ise_knn(test_ynorm,train_ynorm))
+n0 <- n-50
+
+#mc_simu(1000)
+x_s1_1000 <- mc_simu(1000)$a
+f_s1_1000 <- mc_simu(1000)$b                                              
+data_s1_1000 <- data.frame(x_s1_1000,f_s1_1000)#mc_simu(1000)$c 
+
+par(pin=c(1.5,3))
+boxplot(x_s1_1000~f_s1_1000,data_s1_1000,xlab="n=250",ylab="",ylim=c(0,0.80),
+        main="",col=c("light blue","dark blue"),bty="")
+
+x_s1_250 <- mc_simu(250)$a                                              
+f_s1_250 <- mc_simu(250)$b
+data_s1_250 <- data.frame(x_s1_250,f_s1_250)#mc_simu(250)$c
+
+par(pin=c(1.5,3))
+boxplot(x_s1_250~f_s1_250,data_s1_250,xlab="n=500",ylab="",ylim=c(0,0.80),
+        main="",col=c("light blue","dark blue"),bty="")
+
+#mc_simu(500)
+x_s1_500 <- mc_simu(500)$a                                             
+f_s1_500 <- mc_simu(500)$b
+data_s1_500 <- data.frame(x_s1_500,f_s1_500)#mc_simu(500)$c
+
+par(pin=c(1.5,3))
+boxplot(x_s1_500~f_s1_500,data_s1_500,xlab="n=1000",ylab="",ylim=c(0,0.80),
+              main="",col=c("light blue","dark blue"),bty="n")
+
+
+```
+
+
+## S2. mixture of beta
+```{r}
+mc_simu <- function(n){
+  set.seed(1)
+  #n <- 500
+  R <- 100
+
+### True
+  ybeta <- matrix(data=NA,nrow=R,ncol=n)   # matrix with simulated datasets
+  mu2 <- numeric(R)   # vector with mean for each simulated dataset; Here, for initializing
+#med1 <- numeric(R)   # vector with median for each simulated dataset
+
+  for (r in 1:R) {   # run R=1000 times 
+    ybeta[r, ] <- c(rbeta(n/2,2,20),rbeta(n/2,8,10))    # each row denotes one-shot experiment
+    mu2[r] <- mean(ybeta[r, ])
+  }
+  MCMmu2 <- mean(mu2)
+
+# true func
+  dfn_s2 <- function(x){
+    0.5*dbeta(x,2,20) + 0.5*dbeta(x,8,10)
+  }
+
+#estimator Knernel
+  h2 <- density(mu2,kernel="gaussian",bw="SJ")$bw
+  est_kernel <- function(x){
+    fK <- (1/sqrt(2*pi)*h1)*exp(-((x)^2)/(2*(h2^2)))
+    sum_k <- sum(fK)        #sum_K + fK
+    est_K <- sum_k/(n*h2)
+    return (est_K)
+  }
+
+  ise_kernel1 <- function(x) {
+    (est_kernel(x) - dfn_s2(x))^2
+  #(x-y)^2
+  }
+
+
+#KNN
+  find_k <- function(x,y){   # x=test set; y=train set, x is a number & y is a vector
+    k <- sqrt(length(y))
+    dis <- abs(y-x)
+    sort_dis <- sort(dis)
+    k_value <- sort_dis[k]
+    return (k_value) # i.e. Rn
+  }
+
+  est_knn <- function(x,y){
+    Rn <- find_k(x,y)
+    w_x <- (y-x)/(Rn)
+    sum_w <- sum(w_x)
+    est_KNN <- (1/n*Rn)*sum_w
+    return (est_KNN)
+  }
+  ise_knn <- function(x,y){
+    (est_knn(x,y)-dfn_s2(x))^2
+  }
+#integrate(ise_knn,-Inf, Inf)
+# test set & train set
+  n1 <- n/2
+  n2 <- n/2 + 1
+  r1 <- R/2
+  r2 <- R/2+1
+  sort_ybeta <- sort(ybeta) 
+  test_ybeta <- sort_ybeta[1:r1] 
+  train_ybeta <- sort_ybeta[r2:R] 
+  x_s2 <- c(as.vector(ise_kernel1(ybeta[1:200])),as.vector(ise_knn(test_ybeta,train_ybeta)))
+  f_s2 <- factor(rep(c("kernel","knn"),each=125)) #定义分组因子
+ # data_s1 <- data.frame(x_s1,f_s1)
+  #boxplot(x_s1~f_s1,data_s1,xlab="",ylab="",ylim=c(0,0.80),
+  #      main="S1: Mixture of Normal Distribution",
+  #      col=c("light blue","dark blue"),bty="")
+  out <- list(a=x_s2,b=f_s2)#,c=data_s1)
+  return (out)
+}
+#boxplot(ise_knn(test_ynorm,train_ynorm))
+#n0 <- n-50
+
+#mc_simu(1000)
+x_s2_1000 <- mc_simu(1000)$a
+f_s2_1000 <- mc_simu(1000)$b                                              
+data_s2_1000 <- data.frame(x_s2_1000,f_s2_1000)#mc_simu(1000)$c 
+
+par(pin=c(1.5,3))
+boxplot(x_s2_1000~f_s2_1000,data_s2_1000,xlab="n=250",ylab="",ylim=c(0,50),
+        main="",col=c("light blue","dark blue"),bty="",yaxt="n")
+
+x_s2_250 <- mc_simu(250)$a                                              
+f_s2_250 <- mc_simu(250)$b
+data_s2_250 <- data.frame(x_s2_250,f_s2_250)#mc_simu(250)$c
+
+par(pin=c(1.5,3))
+boxplot(x_s2_250~f_s2_250,data_s2_250,xlab="n=500",ylab="",ylim=c(0,50),
+        main="",col=c("light blue","dark blue"),bty="n",yaxt="n")
+
+#mc_simu(500)
+x_s2_500 <- mc_simu(500)$a                                             
+f_s2_500 <- mc_simu(500)$b
+data_s2_500 <- data.frame(x_s2_500,f_s2_500)#mc_simu(500)$c
+
+par(pin=c(1.5,3))
+boxplot(x_s2_500~f_s2_500,data_s2_500,xlab="n=1000",ylab="",ylim=c(0,50),
+        main="",col=c("light blue","dark blue"),bty="n",yaxt="n")
+
+
+
+```
+
+
+
+```{r}
+#a <- cbind(data_s1_250,data_s1_500,data_s1_1000)
+
+x_s1_all <- cbind(x_s1_1000,x_s1_250,x_s1_500)
+f_s1_all <- cbind(f_s1_1000,f_s1_250,f_s1_500)
+data_s1_all <- cbind(data_s1_1000,data_s1_250,data_s1_500)
+boxplot(x_s1_all~f_s1_all,data_s1_all,xlab="",ylab="",ylim=c(0,0.80),
+        main="S1: Mixture of Normal Distribution",
+        col=c("light blue","dark blue"),bty="")
+boxplot(data_s1_all)
+
+d1 <- data_s1_1000 %>% 
+  mutate(n=n())
+#pivot_wider(data_s1_1000, id_cols=n,names_from = f_s1_1000, values_from = x_s1_1000 )
+d2 <- data_s1_250 %>% 
+  mutate(n=n())
+d3 <- data_s1_500 %>% 
+  mutate(n=n())
+d_all <- cbind(d1,d2,d3)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
